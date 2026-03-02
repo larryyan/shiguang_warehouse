@@ -197,3 +197,8 @@ schools:
     name: "东北师范大学"
     initial: "D"
     resource_folder: "NENU"
+
+  - id: "HAUT"
+    name: "河南工业大学"
+    initial: "H"
+    resource_folder: "HAUT"
