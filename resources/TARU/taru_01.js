@@ -113,11 +113,10 @@ function parseJsonData(jsonData) {
 
 /**
  * 检查是否在登录页面。
- * 只有当 URL 精确匹配 'https://jwgl.taru.edu.cn/jwglxt/xtgl/login_slogin.html' 时，才返回 true。
  */
 function isLoginPage() {
     const url = window.location.href;
-    const loginUrl = "https://jwgl.taru.edu.cn/jwglxt/xtgl/login_slogin.html";
+    const loginUrl = "https://auth.taru.edu.cn/cas/login?service=https%3A%2F%2Fhall.taru.edu.cn%2FserviceHall";
     
     // 如果当前 URL 与指定的登录 URL 完全一致，则返回 true (是登录页)
     return url === loginUrl; 
