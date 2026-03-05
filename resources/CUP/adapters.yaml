@@ -6,7 +6,6 @@ adapters:
     asset_js_path: "cup_01.js"
     import_url: "https://bk.cup.edu.cn/student/"
     maintainer: "larryyan"
-<<<<<<< HEAD
     description: "点击统一身份认证登录"
   
   - adapter_id: "CUP_02"
@@ -16,6 +15,3 @@ adapters:
     import_url: "https://gmis.cup.edu.cn/gmis/student/default/index"
     maintainer: "larryyan"
     description: "点击统一身份认证登录\n打开(培养管理=>学生课表查询)页面。\n包含克拉玛依校区(上课时间错误请反馈开发者)。"
-=======
-    description: "点击统一身份认证登录,\n若导入学期错误，请打开课表页面选择后重新导入。"
->>>>>>> 1e9ae4f (add: 中国石油大学(北京)教务适配)
