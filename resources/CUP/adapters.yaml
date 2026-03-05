@@ -1,0 +1,9 @@
+# resources/CUP/adapters.yaml
+adapters:
+  - adapter_id: "CUP_01"
+    adapter_name: "中国石油大学(北京)本科教务系统"
+    category: "BACHELOR_AND_ASSOCIATE"
+    asset_js_path: "cup_01.js"
+    import_url: "https://bk.cup.edu.cn/student/"
+    maintainer: "larryyan"
+    description: "点击统一身份认证登录,\n若导入学期错误, 请打开课表页面选择后重新导入。"

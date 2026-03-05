@@ -206,7 +206,7 @@ schools:
   - id: "AHSZU"
     name: "宿州学院"
     initial: "S"
-    resource_folder: "AHSZU"    
+    resource_folder: "AHSZU"
 
   - id: "XAUT"
     name: "西安理工大学"
@@ -216,4 +216,9 @@ schools:
   - id: "HUAT"
     name: "湖北汽车工业学院"
     initial: "H"
-    resource_folder: "HUAT" 
+    resource_folder: "HUAT"
+
+  - id: "CUP"
+    name: "中国石油大学(北京)"
+    initial: "Z"
+    resource_folder: "CUP"
