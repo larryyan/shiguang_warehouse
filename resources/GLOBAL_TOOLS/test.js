@@ -1,4 +1,4 @@
-// resources/CUP/cup_01.js
+// 文件: school.js
 
 // 1. 显示一个公告信息弹窗
 async function promptUserToStart() {
@@ -195,6 +195,13 @@ async function runImportFlow() {
         // 用户取消，直接退出
         return;
     }
+    
+    // 6. 保存配置数据 (例如学期开始日期)
+    const configSaveResult = await saveConfig(semesterIndex);
+    if (!configSaveResult) {
+        // 保存配置失败，直接退出
+        return;
+    }
 
     // 3. 获取课程数据
     const printData = await fetchPrintData(semesterIndex);
@@ -215,13 +222,6 @@ async function runImportFlow() {
     const timeSlotImportResult = await importPresetTimeSlots(printData);
     if (!timeSlotImportResult) {
         // 时间段导入失败，直接退出
-        return;
-    }
-    
-    // 6. 保存配置数据 (例如学期开始日期)
-    const configSaveResult = await saveConfig(semesterIndex);
-    if (!configSaveResult) {
-        // 保存配置失败，直接退出
         return;
     }
 
