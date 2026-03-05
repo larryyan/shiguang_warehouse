@@ -32,13 +32,46 @@ async function getSemesterIndex() {
         const htmlString = await response.text();
         const parser = new DOMParser();
         const dom = parser.parseFromString(htmlString, 'text/html');
-        const selectElement = dom.getElementById('allSemesters');
+        const selectElement = dom.getElementById('semesters') || dom.getElementById('allSemesters');
+        
         if (!selectElement) {
-            throw new Error("页面中未找到学期选择框 (allSemesters)");
+            throw new Error("页面中未找到学期选择框");
         }
-        const semesterIndex = selectElement.value;
-        AndroidBridge.showToast("成功获取学期信息: " + semesterIndex);
-        return semesterIndex; // 成功时返回学期编号
+
+        // 1. 将所有 option 转换为数组
+        const options = Array.from(selectElement.options);
+        
+        // 2. 过滤掉 "全部学期" (value="all")，因为导入课表通常只能导具体的某一学期
+        const validOptions = options.filter(opt => opt.value !== "all");
+        
+        if (validOptions.length === 0) {
+            throw new Error("未解析到有效的学期列表");
+        }
+
+        // 3. 提取用于展示的文本数组和用于请求的 value 数组
+        const semesterTexts = validOptions.map(opt => opt.text);  // 例: ["2025-2026-2", "2025-2026-1", ...]
+        const semesterValues = validOptions.map(opt => opt.value); // 例: ["191", "171", ...]
+
+        // 4. 调用安卓原生弹窗，让用户选择
+        const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
+            "选择学期", 
+            JSON.stringify(semesterTexts), // 必须是 JSON 字符串
+            0 // 默认选中第一个（通常是最新学期）
+        );
+
+        // 5. 判断用户的选择结果
+        if (selectedIndex !== null && selectedIndex >= 0) {
+            // 根据选中的索引，获取对应的学期 ID (value)
+            const selectedValue = semesterValues[selectedIndex];
+            if (typeof AndroidBridge !== 'undefined' && AndroidBridge.showToast) {
+                AndroidBridge.showToast("已选择学期: " + semesterTexts[selectedIndex]);
+            }
+            return selectedValue; // 成功时返回学期编号 (例如 "191")
+        } else {
+            // 用户取消了选择
+            console.log("用户取消了学期选择");
+            return null;
+        }
     } catch (error) {
         console.error("获取学期信息时发生错误:", error);
         AndroidBridge.showToast("Alert：获取学期信息出错！" + error.message);
@@ -97,16 +130,16 @@ async function parseCourses(printData) {
     }
 }
 
-function formatTime(timeInt) {
-    // 将数字转为字符串，并在前面补0直到长度为4
-    const timeStr = timeInt.toString().padStart(4, '0'); 
-    // 截取前两位作为小时，后两位作为分钟，中间加冒号
-    return `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}`;
-}
-
 // 5. 导入预设时间段
 async function importPresetTimeSlots(printData) {
     console.log("正在准备预设时间段数据...");
+
+    function formatTime(timeInt) {
+        // 将数字转为字符串，并在前面补0直到长度为4
+        const timeStr = timeInt.toString().padStart(4, '0'); 
+        // 截取前两位作为小时，后两位作为分钟，中间加冒号
+        return `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}`;
+    }
 
     const courseUnitList = printData.studentTableVms[0].timeTableLayout.courseUnitList;
     const presetTimeSlots = courseUnitList.map(unit => {
@@ -127,6 +160,7 @@ async function importPresetTimeSlots(printData) {
             console.log("预设时间段导入未成功，结果：" + result);
             window.AndroidBridge.showToast("测试时间段导入失败，请查看日志。");
         }
+        return result; // 返回导入结果，供流程控制使用
     } catch (error) {
         console.error("导入时间段时发生错误:", error);
         window.AndroidBridge.showToast("导入时间段失败: " + error.message);
@@ -168,6 +202,7 @@ async function saveConfig(semesterIndex) {
             console.log("课表配置导入未成功，结果：" + result);
             AndroidBridge.showToast("测试配置导入失败，请查看日志。");
         }
+        return result; // 返回导入结果，供流程控制使用
     } catch (error) {
         console.error("导入配置时发生错误:", error);
         AndroidBridge.showToast("导入配置失败: " + error.message);
@@ -195,13 +230,6 @@ async function runImportFlow() {
         // 用户取消，直接退出
         return;
     }
-    
-    // 6. 保存配置数据 (例如学期开始日期)
-    const configSaveResult = await saveConfig(semesterIndex);
-    if (!configSaveResult) {
-        // 保存配置失败，直接退出
-        return;
-    }
 
     // 3. 获取课程数据
     const printData = await fetchPrintData(semesterIndex);
@@ -222,6 +250,13 @@ async function runImportFlow() {
     const timeSlotImportResult = await importPresetTimeSlots(printData);
     if (!timeSlotImportResult) {
         // 时间段导入失败，直接退出
+        return;
+    }
+    
+    // 6. 保存配置数据 (例如学期开始日期)
+    const configSaveResult = await saveConfig(semesterIndex);
+    if (!configSaveResult) {
+        // 保存配置失败，直接退出
         return;
     }
 

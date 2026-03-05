@@ -1,4 +1,4 @@
-// resources/CUP/cup_01.js
+// 文件: school.js
 
 // 1. 显示一个公告信息弹窗
 async function promptUserToStart() {
@@ -76,7 +76,17 @@ async function getSemesterIndex() {
 =======
         const selectElement = dom.getElementById('allSemesters');
         if (!selectElement) {
-            throw new Error("页面中未找到学期选择框 (allSemesters)");
+            throw new Error("页面中未找到学期选择框");
+        }
+
+        // 1. 将所有 option 转换为数组
+        const options = Array.from(selectElement.options);
+        
+        // 2. 过滤掉 "全部学期" (value="all")，因为导入课表通常只能导具体的某一学期
+        const validOptions = options.filter(opt => opt.value !== "all");
+        
+        if (validOptions.length === 0) {
+            throw new Error("未解析到有效的学期列表");
         }
         const semesterIndex = selectElement.value;
         AndroidBridge.showToast("成功获取学期信息: " + semesterIndex);
