@@ -217,3 +217,8 @@ schools:
     name: "湖北汽车工业学院"
     initial: "H"
     resource_folder: "HUAT" 
+
+  - id: "CUP"
+    name: "中国石油大学(北京)"
+    initial: "C"
+    resource_folder: "CUP"
