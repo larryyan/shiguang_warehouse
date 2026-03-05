@@ -32,6 +32,7 @@ async function getSemesterIndex() {
         const htmlString = await response.text();
         const parser = new DOMParser();
         const dom = parser.parseFromString(htmlString, 'text/html');
+<<<<<<< HEAD
         const selectElement = dom.getElementById('semesters') || dom.getElementById('allSemesters');
         
         if (!selectElement) {
@@ -72,6 +73,15 @@ async function getSemesterIndex() {
             console.log("用户取消了学期选择");
             return null;
         }
+=======
+        const selectElement = dom.getElementById('allSemesters');
+        if (!selectElement) {
+            throw new Error("页面中未找到学期选择框 (allSemesters)");
+        }
+        const semesterIndex = selectElement.value;
+        AndroidBridge.showToast("成功获取学期信息: " + semesterIndex);
+        return semesterIndex; // 成功时返回学期编号
+>>>>>>> 1e9ae4f (add: 中国石油大学(北京)教务适配)
     } catch (error) {
         console.error("获取学期信息时发生错误:", error);
         AndroidBridge.showToast("Alert：获取学期信息出错！" + error.message);
@@ -130,10 +140,21 @@ async function parseCourses(printData) {
     }
 }
 
+<<<<<<< HEAD
+=======
+function formatTime(timeInt) {
+    // 将数字转为字符串，并在前面补0直到长度为4
+    const timeStr = timeInt.toString().padStart(4, '0'); 
+    // 截取前两位作为小时，后两位作为分钟，中间加冒号
+    return `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}`;
+}
+
+>>>>>>> 1e9ae4f (add: 中国石油大学(北京)教务适配)
 // 5. 导入预设时间段
 async function importPresetTimeSlots(printData) {
     console.log("正在准备预设时间段数据...");
 
+<<<<<<< HEAD
     function formatTime(timeInt) {
         // 将数字转为字符串，并在前面补0直到长度为4
         const timeStr = timeInt.toString().padStart(4, '0'); 
@@ -141,6 +162,8 @@ async function importPresetTimeSlots(printData) {
         return `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}`;
     }
 
+=======
+>>>>>>> 1e9ae4f (add: 中国石油大学(北京)教务适配)
     const courseUnitList = printData.studentTableVms[0].timeTableLayout.courseUnitList;
     const presetTimeSlots = courseUnitList.map(unit => {
         return {
@@ -160,7 +183,10 @@ async function importPresetTimeSlots(printData) {
             console.log("预设时间段导入未成功，结果：" + result);
             window.AndroidBridge.showToast("测试时间段导入失败，请查看日志。");
         }
+<<<<<<< HEAD
         return result; // 返回导入结果，供流程控制使用
+=======
+>>>>>>> 1e9ae4f (add: 中国石油大学(北京)教务适配)
     } catch (error) {
         console.error("导入时间段时发生错误:", error);
         window.AndroidBridge.showToast("导入时间段失败: " + error.message);
@@ -202,7 +228,10 @@ async function saveConfig(semesterIndex) {
             console.log("课表配置导入未成功，结果：" + result);
             AndroidBridge.showToast("测试配置导入失败，请查看日志。");
         }
+<<<<<<< HEAD
         return result; // 返回导入结果，供流程控制使用
+=======
+>>>>>>> 1e9ae4f (add: 中国石油大学(北京)教务适配)
     } catch (error) {
         console.error("导入配置时发生错误:", error);
         AndroidBridge.showToast("导入配置失败: " + error.message);
