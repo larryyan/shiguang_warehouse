@@ -6,4 +6,4 @@ adapters:
     asset_js_path: "cup_01.js"
     import_url: "https://bk.cup.edu.cn/student/"
     maintainer: "larryyan"
-    description: "点击统一身份认证登录,\n若导入学期错误，请打开课表页面选择后重新导入。"
+    description: "点击统一身份认证登录,\n若导入学期错误, 请打开课表页面选择后重新导入。"
