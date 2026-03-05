@@ -220,5 +220,5 @@ schools:
 
   - id: "CUP"
     name: "中国石油大学(北京)"
-    initial: "C"
+    initial: "Z"
     resource_folder: "CUP"
