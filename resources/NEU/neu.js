@@ -4,7 +4,6 @@
 async function showCampusSelection() {
     const campuses = ["南湖校区", "浑南校区"];
     try {
-        console.log("即将显示单选列表弹窗...");
         const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
             "选择你所在的校区",
             JSON.stringify(campuses),
@@ -25,16 +24,13 @@ async function showCampusSelection() {
 // 2. 从课表页面中提取课程数据
 async function extractCoursesFromPage() {
     const iframe = document.querySelector('iframe');
-    const lessons = [];
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    const time = iframeDoc.querySelector('.kbappTimeXQText')
-    const time_text = time.textContent; 
     const dayCols = iframeDoc.querySelectorAll('.kbappTimetableDayColumnRoot');
-    
+    const lessons = [];
+
     dayCols.forEach((dayCol, dayIndex) => {
         const timeSlots = dayCol.children;
         const day = dayIndex >= 1 ? dayIndex : 7;
-        
         let startSection = 0;
         let endSection = 0;
         
@@ -44,35 +40,47 @@ async function extractCoursesFromPage() {
             startSection = endSection + 1;
             endSection = startSection + nums - 1;
             
-            if (slot.classList.contains('kbappTimetableDayColumnConflictContainer')) {
-                // 获取所有课程项
-                const courseItems = slot.querySelectorAll('.kbappTimetableCourseRenderCourseItem');
+            const courseColumns = slot.querySelectorAll('.kbappTimetableCourseRenderColumn');
+            courseColumns.forEach(courseColumn => {
+                const divsWithoutClass = courseColumn.querySelector('div[style*="flex"]:not([class])');
+                let currentSection = startSection;
+                if (divsWithoutClass) {
+                    empty_num = parseInt(divsWithoutClass.style.flex.split(' ')[0]);
+                    currentSection += empty_num;
+                }
+                const courseItem = courseColumn.querySelector('.kbappTimetableCourseRenderCourseItemContainer');
+                const column_nums = parseInt(courseItem.style.flex.split(' ')[0]);
+                const tooltip = courseItem.querySelector('.el-popover');
                 
-                courseItems.forEach(courseItem => {
-                    const infoTexts = courseItem.querySelectorAll('.kbappTimetableCourseRenderCourseItemInfoText');
+                // 检查tooltip是否存在
+                if (tooltip) {
+                    // 获取每一行作为一个单独的元素
+                    const infoItems = tooltip.querySelectorAll('[class*="CourseItemInfoPopperInfo"]');
                     let name, details;
                     
-                    infoTexts.forEach((text, idx) => {
-                        if (idx === 0) name = text.textContent.trim();
-                        else if (idx === 1) details = parseCourseDetails(text.textContent.trim());
-                        else if (idx === 2) return;
-                    });
+                    if (infoItems.length > 0) {
+                        infoItems.forEach((item, idx) => {
+                            if (idx === 0) name = item.textContent.trim();
+                            else if (idx === 1) details = parseCourseDetails(item.textContent.trim());
+                            else if (idx === 2) return;
+                        });
+                    }
                     
                     lessons.push({
-                        name: name, 
-                        teacher: details.teacher, 
-                        position: details.position, 
+                        name: name || "", 
+                        teacher: details?.teacher || "", 
+                        position: details?.position || "", 
                         day: day, 
-                        startSection: startSection, 
-                        endSection: endSection,
-                        weeks: details.weeks
+                        startSection: currentSection, 
+                        endSection: currentSection + column_nums - 1,
+                        weeks: details?.weeks || []
                     });
-                });
-            } 
-        }
+                }
+            });
+        } 
     });
 
-    return { lessons: lessons, time_text: time_text };
+    return { lessons: lessons };
 }
 
 // 2.1 解析课程详情字符串，提取周次、教师和地点信息
@@ -160,7 +168,6 @@ function parseWeeksString(weeksStr) {
 
 // 3. 导入课程数据
 async function SaveCourses(lessons) {
-    console.log("正在准备导入课程数据...");
     const testCourses = lessons;
 
     try {
@@ -173,8 +180,6 @@ async function SaveCourses(lessons) {
 
 // 4. 根据校区导入对应的时间段
 async function importTimeSlotsByCampus(campus) {
-    console.log(`正在准备${campus}时间段数据...`);
-
     const hunNanTimeSlots = [
         { "number": 1, "startTime": "08:30", "endTime": "09:15" },
         { "number": 2, "startTime": "09:25", "endTime": "10:10" },
@@ -217,8 +222,7 @@ async function importTimeSlotsByCampus(campus) {
 }
 
 // 5. 导入课表配置
-async function SaveConfig(time_text) {
-    console.log("正在准备配置数据...");
+async function SaveConfig() {
     // 注意：只传入要修改的字段，其他字段（如 semesterTotalWeeks）会使用 Kotlin 模型中的默认值
     const courseConfigData = {
         "semesterTotalWeeks": 18,
@@ -243,7 +247,7 @@ async function runAllDemosSequentially() {
     AndroidBridge.showToast("开始导入课表...");
     
 
-    // 2. 校区选择
+    // 1. 校区选择
     const selectedCampus = await showCampusSelection();
     if (!selectedCampus) {
         console.log("用户取消了校区选择，停止后续执行。");
@@ -254,7 +258,6 @@ async function runAllDemosSequentially() {
     // 3. 从课表页面中提取课程数据
     const PageInfo = await extractCoursesFromPage();
     const lessons = PageInfo.lessons;
-    const time_text = PageInfo.time_text;
     
     // 4. 保存课程数据到数据库
     await SaveCourses(lessons);
@@ -263,7 +266,7 @@ async function runAllDemosSequentially() {
     await importTimeSlotsByCampus(selectedCampus);
     
     // 6. 保存底层配置
-    await SaveConfig(time_text);
+    await SaveConfig();
 
     // 发送最终的生命周期完成信号
     AndroidBridge.notifyTaskCompletion();
