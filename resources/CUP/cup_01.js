@@ -1,4 +1,4 @@
-// 文件: school.js
+// resources/CUP/cup_01.js
 
 // 1. 显示一个公告信息弹窗
 async function promptUserToStart() {
