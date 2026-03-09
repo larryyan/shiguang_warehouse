@@ -369,7 +369,7 @@ async function runImportFlow() {
     let currentYear = new Date().getFullYear();
     const academicYear = await window.AndroidBridgePromise.showPrompt(
         "选择学年", 
-        "请输入要导入课程的学年（如 " + currentYear + "）:",
+        "请输入要导入课程的起始学年（例如 2025-2026 应输入2025）:",
         String(currentYear),
         "validateYearInput"
     );

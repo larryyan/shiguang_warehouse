@@ -574,7 +574,7 @@ function validateYearInput(input) {
 async function getAcademicYear(currentYear) {
     const yearSelection = await window.AndroidBridgePromise.showPrompt(
         "选择学年", 
-        "请输入要导入课程的学年（如 2026）:",
+        "请输入要导入课程的起始学年（例如 2025-2026 应输入2025）:",
         parseInt(currentYear) + 1980, 
         "validateYearInput" // 传入全局函数名
     );

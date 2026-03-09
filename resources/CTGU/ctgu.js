@@ -155,7 +155,7 @@ async function getAcademicYear() {
     const currentYear = new Date().getFullYear();
     const yearSelection = await window.AndroidBridgePromise.showPrompt(
         "选择学年",
-        "请输入要导入课程的学年（例如 2025）:",
+        "请输入要导入课程的起始学年（例如 2025-2026 应输入2025）:",
         String(currentYear), 
         "validateYearInput"
     );
