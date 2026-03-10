@@ -262,3 +262,8 @@ schools:
     name: "天津城建大学"
     initial: "T"
     resource_folder: "TCU"
+
+  - id: "SCUT"
+    name: "华南理工大学"
+    initial: "H"
+    resource_folder: "SCUT"
