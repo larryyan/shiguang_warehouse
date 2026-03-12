@@ -76,150 +76,107 @@ function validateDateInput(input) {
 
 // 1. 显示一个公告信息弹窗
 async function promptUserToStart() {
-    try {
-        console.log("即将显示公告弹窗...");
-        const confirmed = await window.AndroidBridgePromise.showAlert(
-            "重要通知",
-            "导入前请确保您已成功登录教务系统，并选定正确的学期。",
-            "好的，开始"
-        );
-        if (confirmed) {
-            AndroidBridge.showToast("Alert：用户点击了确认！");
-            return true; 
-        } else {
-            AndroidBridge.showToast("Alert：用户取消了！");
-            return false; 
-        }
-    } catch (error) {
-        AndroidBridge.showToast("Alert：显示弹窗出错！" + error.message);
-        return false; 
-    }
+    console.log("即将显示公告弹窗...");
+    const confirmed = await window.AndroidBridgePromise.showAlert(
+        "重要通知",
+        "导入前请确保您已成功登录教务系统，并选定正确的学期。",
+        "好的，开始"
+    );
+    return confirmed === true;
 }
 
 // 2. 选择校区 (使用配置项)
 async function selectCampus() {
-    try {
-        // 从配置中提取用于展示的名称数组
-        const campusLabels = CAMPUS_OPTIONS.map(opt => opt.label);
-        
-        const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
-            "选择所在校区", 
-            JSON.stringify(campusLabels), 
-            0 
-        );
+    // 从配置中提取用于展示的名称数组
+    const campusLabels = CAMPUS_OPTIONS.map(opt => opt.label);
+    
+    const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
+        "选择所在校区", 
+        JSON.stringify(campusLabels), 
+        0 
+    );
 
-        if (selectedIndex !== null && selectedIndex >= 0) {
-            const selectedCampus = CAMPUS_OPTIONS[selectedIndex];
-            if (typeof AndroidBridge !== 'undefined') {
-                AndroidBridge.showToast("已选择: " + selectedCampus.label);
-            }
-            // 返回选中的校区 ID ("MainCampus" 或 "Karamay")
-            return selectedCampus.id; 
-        } else {
-            if (typeof AndroidBridge !== 'undefined') {
-                AndroidBridge.showToast("取消导入：未选择校区。");
-            }
-            return null;
+    if (selectedIndex !== null && selectedIndex >= 0) {
+        const selectedCampus = CAMPUS_OPTIONS[selectedIndex];
+        if (!selectedCampus) {
+            throw new Error("校区选择结果无效。");
         }
-    } catch (error) {
-        console.error("选择校区时发生错误:", error);
-        return null; 
-    }    
+        // 返回选中的校区 ID ("MainCampus" 或 "Karamay")
+        return selectedCampus.id; 
+    }
+
+    return null;
 }
 
 // 3. 获取学期信息
 async function getTermCode() {
-    try {
-        if (typeof AndroidBridge !== 'undefined') AndroidBridge.showToast("正在获取学期列表...");
-
-        if (typeof $ === 'undefined' || !$.ajax) {
-            throw new Error("未检测到 jQuery 环境，请确保在正确的课表页面执行。");
-        }
-
-        const termData = await new Promise((resolve, reject) => {
-            $.ajax({
-                type: 'get',
-                dataType: 'json',
-                url: '/gmis/default/bindterm',
-                cache: false, 
-                success: function (data) { resolve(data); },
-                error: function (xhr, status, error) { reject(new Error(`网络请求失败，状态码: ${xhr.status} ${error}`)); }
-            });
-        });
-
-        if (!termData || termData.length === 0) {
-            throw new Error("未能获取到有效的学期列表数据。");
-        }
-
-        const semesterTexts = [];
-        const semesterValues = [];
-        let defaultSelectedIndex = 0; 
-
-        termData.forEach((item, index) => {
-            semesterTexts.push(item.termname);
-            semesterValues.push(item.termcode);
-            if (item.selected) {
-                defaultSelectedIndex = index;
-            }
-        });
-
-        const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
-            "选择导入学期", 
-            JSON.stringify(semesterTexts), 
-            defaultSelectedIndex
-        );
-
-        if (selectedIndex !== null && selectedIndex >= 0) {
-            const selectedValue = semesterValues[selectedIndex];
-            if (typeof AndroidBridge !== 'undefined') {
-                AndroidBridge.showToast("已选择学期: " + semesterTexts[selectedIndex]);
-            }
-            return selectedValue; 
-        } else {
-            if (typeof AndroidBridge !== 'undefined') {
-                AndroidBridge.showToast("取消导入：未选择学期。");
-            }
-            return null;
-        }
-
-    } catch (error) {
-        console.error("读取学期信息时发生错误:", error);
-        if (typeof AndroidBridge !== 'undefined') {
-            AndroidBridge.showToast("Alert：读取学期信息出错！" + error.message);
-        }
-        return null; 
+    if (typeof $ === 'undefined' || !$.ajax) {
+        throw new Error("未检测到 jQuery 环境，请确保在正确的课表页面执行。");
     }
+
+    const termData = await new Promise((resolve, reject) => {
+        $.ajax({
+            type: 'get',
+            dataType: 'json',
+            url: '/gmis/default/bindterm',
+            cache: false, 
+            success: function (data) { resolve(data); },
+            error: function (xhr, status, error) { reject(new Error(`网络请求失败，状态码: ${xhr.status} ${error}`)); }
+        });
+    });
+
+    if (!termData || termData.length === 0) {
+        throw new Error("未能获取到有效的学期列表数据。");
+    }
+
+    const semesterTexts = [];
+    const semesterValues = [];
+    let defaultSelectedIndex = 0; 
+
+    termData.forEach((item, index) => {
+        semesterTexts.push(item.termname);
+        semesterValues.push(item.termcode);
+        if (item.selected) {
+            defaultSelectedIndex = index;
+        }
+    });
+
+    const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
+        "选择导入学期", 
+        JSON.stringify(semesterTexts), 
+        defaultSelectedIndex
+    );
+
+    if (selectedIndex !== null && selectedIndex >= 0) {
+        return semesterValues[selectedIndex];
+    }
+
+    return null;
 }
 
 // 4. 获取课程数据
 async function fetchData(termCode) {
-    try {
-        if (typeof $ === 'undefined' || !$.ajax) {
-            throw new Error("未检测到 jQuery 环境，请确保在正确的课表页面执行。");
-        }
-
-        const response = await new Promise((resolve, reject) => {
-            $.ajax({
-                type: 'post',
-                dataType: 'json',
-                url: "../pygl/py_kbcx_ew",
-                data: { 'kblx': 'xs', 'termcode': termCode },
-                cache: false,
-                success: function (data) { resolve(data); },
-                error: function (xhr, status, error) { reject(new Error(`网络请求失败，状态码: ${xhr.status} ${error}`)); }
-            });
-        });
-
-        if (!response || !response.rows) {
-            throw new Error("接口返回数据为空或解密后格式不正确");
-        }
-
-        return response.rows;
-
-    } catch (error) {
-        AndroidBridge.showToast("Alert：获取数据出错！" + error.message);
-        return null;
+    if (typeof $ === 'undefined' || !$.ajax) {
+        throw new Error("未检测到 jQuery 环境，请确保在正确的课表页面执行。");
     }
+
+    const response = await new Promise((resolve, reject) => {
+        $.ajax({
+            type: 'post',
+            dataType: 'json',
+            url: "../pygl/py_kbcx_ew",
+            data: { 'kblx': 'xs', 'termcode': termCode },
+            cache: false,
+            success: function (data) { resolve(data); },
+            error: function (xhr, status, error) { reject(new Error(`网络请求失败，状态码: ${xhr.status} ${error}`)); }
+        });
+    });
+
+    if (!response || !response.rows) {
+        throw new Error("接口返回数据为空或解密后格式不正确");
+    }
+
+    return response.rows;
 }
 
 // 5. 导入课程数据
@@ -229,17 +186,11 @@ async function parseCourses(py_kbcx_ew, isKaramayCampus) {   
 
     // 辅助函数 1：根据 jcid 转换成标准的节次编号
     function getStandardSection(jcid) {
-        // 上午始终是 1 开始 (11-15 -> 1-5)
         if (jcid >= 11 && jcid <= 15) return jcid - 10;
-        
-        // 下午偏移量：克拉玛依上午有5节，所以下午从第6节开始(+5)；本校上午只有4节，下午从第5节开始(+4)
         let afternoonOffset = isKaramayCampus ? 5 : 4;
         if (jcid >= 21 && jcid <= 24) return jcid - 20 + afternoonOffset; 
-        
-        // 晚上偏移量：克拉玛依白天9节(5+4)，晚上从10开始(+9)；本校白天8节(4+4)，晚上从9开始(+8)
         let eveningOffset = isKaramayCampus ? 9 : 8;
         if (jcid >= 31 && jcid <= 33) return jcid - 30 + eveningOffset;
-        
         return 1; // 默认兜底
     }
 
@@ -341,15 +292,9 @@ async function parseCourses(py_kbcx_ew, isKaramayCampus) {   
         return c;
     });
 
-    try {
-        const result = await window.AndroidBridgePromise.saveImportedCourses(JSON.stringify(finalCourses));
-        if (result === true) {
-            if (typeof AndroidBridge !== 'undefined') AndroidBridge.showToast("测试课程导入成功！");
-        } else {
-            if (typeof AndroidBridge !== 'undefined') AndroidBridge.showToast("测试课程导入失败，请查看日志。");
-        }
-    } catch (error) {
-        if (typeof AndroidBridge !== 'undefined') AndroidBridge.showToast("导入课程失败: " + error.message);
+    const result = await window.AndroidBridgePromise.saveImportedCourses(JSON.stringify(finalCourses));
+    if (result !== true) {
+        throw new Error("课程导入失败，请查看日志。");
     }
 }
 
@@ -407,15 +352,9 @@ async function importPresetTimeSlots(campusId) {   
         }
     });
 
-    try {
-        const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(generatedSlots));
-        if (result === true) {
-            window.AndroidBridge.showToast("测试时间段导入成功！");
-        } else {
-            window.AndroidBridge.showToast("测试时间段导入失败，请查看日志。");
-        }
-    } catch (error) {
-        window.AndroidBridge.showToast("导入时间段失败: " + error.message);
+    const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(generatedSlots));
+    if (result !== true) {
+        throw new Error("时间段导入失败，请查看日志。");
     }
 }
 
@@ -430,9 +369,6 @@ async function saveConfig() {
     );
 
     if (startDate === null) {
-        if (typeof AndroidBridge !== 'undefined') {
-            AndroidBridge.showToast("已取消开学日期设置，将使用默认配置。");
-        }
         startDate = "2025-09-01"; 
     } else {
         startDate = startDate.trim().replace(/[\/\.]/g, '-');
@@ -446,17 +382,10 @@ async function saveConfig() {
         "firstDayOfWeek": 1
     };
 
-    try {
-        const configJsonString = JSON.stringify(courseConfigData);
-        const result = await window.AndroidBridgePromise.saveCourseConfig(configJsonString);
-
-        if (result === true) {
-            AndroidBridge.showToast("测试配置导入成功！开学日期: " + startDate);
-        } else {
-            AndroidBridge.showToast("测试配置导入失败，请查看日志。");
-        }
-    } catch (error) {
-        AndroidBridge.showToast("导入配置失败: " + error.message);
+    const configJsonString = JSON.stringify(courseConfigData);
+    const result = await window.AndroidBridgePromise.saveCourseConfig(configJsonString);
+    if (result !== true) {
+        throw new Error("导入配置失败，请查看日志。");
     }
 }
 
@@ -464,42 +393,49 @@ async function saveConfig() {
  * 编排整个课程导入流程。
  */
 async function runImportFlow() {
-    // 1. 公告和前置检查。
-    const alertConfirmed = await promptUserToStart();
-    if (!alertConfirmed) return;
-    
-    // 2. 选择校区。 (获取校区ID)
-    const campusId = await selectCampus();
-    if (campusId === null) return;
-    
-    // 生成一个 boolean 给解析课程使用
-    const isKaramayCampus = (campusId === "Karamay");
+    try {
+        // 1. 公告和前置检查。
+        const alertConfirmed = await promptUserToStart();
+        if (!alertConfirmed) {
+            throw new Error("导入已取消。");
+        }
+        
+        // 2. 选择校区。 (获取校区ID)
+        const campusId = await selectCampus();
+        if (campusId === null) {
+            throw new Error("导入已取消：未选择校区。");
+        }
+        
+        // 生成一个 boolean 给解析课程使用
+        const isKaramayCampus = (campusId === "Karamay");
 
-    // 3. 获取学期。
-    const termCode = await getTermCode();
-    if (termCode === null) {
-        AndroidBridge.showToast("导入已取消。");
-        return;
+        // 3. 获取学期。
+        const termCode = await getTermCode();
+        if (termCode === null) {
+            throw new Error("导入已取消：未选择学期。");
+        }
+
+        // 4. 获取课程数据
+        const py_kbcx_ew = await fetchData(termCode);
+
+        // 5. 解析课程信息。 (传入 boolean)
+        await parseCourses(py_kbcx_ew, isKaramayCampus);
+        
+        // 6. 导入时间段数据。 (传入字符串 campusId，供引擎推算)
+        await importPresetTimeSlots(campusId);
+        
+        // 7. 保存配置数据 
+        await saveConfig();
+
+        // 8. 流程**完全成功**，发送结束信号。
+        AndroidBridge.notifyTaskCompletion();
+    } catch (error) {
+        const message = error && error.message ? error.message : "导入流程执行失败。";
+        if (typeof AndroidBridge !== 'undefined') {
+            AndroidBridge.showToast(message);
+        }
+        console.error("runImportFlow error:", error);
     }
-
-    // 4. 获取课程数据
-    const py_kbcx_ew = await fetchData(termCode);
-    if (py_kbcx_ew === null) {
-        AndroidBridge.showToast("导入已取消。");
-        return;
-    }
-
-    // 5. 解析课程信息。 (传入 boolean)
-    await parseCourses(py_kbcx_ew, isKaramayCampus);
-    
-    // 6. 导入时间段数据。 (传入字符串 campusId，供引擎推算)
-    await importPresetTimeSlots(campusId);
-    
-    // 7. 保存配置数据 
-    await saveConfig();
-
-    // 8. 流程**完全成功**，发送结束信号。
-    AndroidBridge.notifyTaskCompletion();
 }
 
 // 启动所有演示
