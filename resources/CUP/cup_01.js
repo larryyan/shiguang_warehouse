@@ -32,7 +32,6 @@ async function getSemesterIndex() {
         const htmlString = await response.text();
         const parser = new DOMParser();
         const dom = parser.parseFromString(htmlString, 'text/html');
-<<<<<<< HEAD
         const selectElement = dom.getElementById('semesters') || dom.getElementById('allSemesters');
         
         if (!selectElement) {
@@ -73,25 +72,6 @@ async function getSemesterIndex() {
             console.log("用户取消了学期选择");
             return null;
         }
-=======
-        const selectElement = dom.getElementById('allSemesters');
-        if (!selectElement) {
-            throw new Error("页面中未找到学期选择框");
-        }
-
-        // 1. 将所有 option 转换为数组
-        const options = Array.from(selectElement.options);
-        
-        // 2. 过滤掉 "全部学期" (value="all")，因为导入课表通常只能导具体的某一学期
-        const validOptions = options.filter(opt => opt.value !== "all");
-        
-        if (validOptions.length === 0) {
-            throw new Error("未解析到有效的学期列表");
-        }
-        const semesterIndex = selectElement.value;
-        AndroidBridge.showToast("成功获取学期信息: " + semesterIndex);
-        return semesterIndex; // 成功时返回学期编号
->>>>>>> 1e9ae4f (add: 中国石油大学(北京)教务适配)
     } catch (error) {
         console.error("获取学期信息时发生错误:", error);
         AndroidBridge.showToast("Alert：获取学期信息出错！" + error.message);
