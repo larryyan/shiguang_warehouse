@@ -5,7 +5,7 @@
 // 适配开发者：larryyan
 
 // ==========================================
-// 全局配置与验证函数
+// 0. 全局配置与验证函数
 // ==========================================
 
 const PRESET_TIME_CONFIG = {
@@ -228,15 +228,27 @@ async function fetchData(termCode) {
 // 5. 导入课程数据
 async function parseCourses(py_kbcx_ew, isKaramayCampus) {
     console.log("正在解析研究生课程数据...");
+    
+    // 用于存放每一小节课的临时数组
     let allCourseBlocks = [];
 
+    // 修复 Bug：根据校区动态推算下午和晚上的起始节次偏移量
     function getStandardSection(jcid) {
+        // 上午始终是 1 开始 (11-15 -> 1-5)
         if (jcid >= 11 && jcid <= 15) return jcid - 10;
-        if (jcid >= 21 && jcid <= 24) return jcid - 20 + 5; 
-        if (jcid >= 31 && jcid <= 33) return jcid - 30 + 9;
-        return 1; 
+        
+        // 下午偏移量：克拉玛依上午有5节，所以下午从第6节开始(+5)；本校上午只有4节，下午从第5节开始(+4)
+        let afternoonOffset = isKaramayCampus ? 5 : 4;
+        if (jcid >= 21 && jcid <= 24) return jcid - 20 + afternoonOffset; 
+        
+        // 晚上偏移量：克拉玛依白天9节(5+4)，晚上从10开始(+9)；本校白天8节(4+4)，晚上从9开始(+8)
+        let eveningOffset = isKaramayCampus ? 9 : 8;
+        if (jcid >= 31 && jcid <= 33) return jcid - 30 + eveningOffset;
+        
+        return 1; // 默认兜底
     }
 
+    // 辅助函数 2：解析类似 "连续周 1-12周" 或 "单周 1-11周" 的字符串，返回数字数组
     function parseWeeks(weekStr) {
         let weeks = [];
         let isSingle = weekStr.includes('单');
@@ -263,27 +275,33 @@ async function parseCourses(py_kbcx_ew, isKaramayCampus) {
         return [...new Set(weeks)].sort((a, b) => a - b);
     }
 
+    // --- 第一步：将按“行”排列的数据，拆解提取出每一小节课 ---
     py_kbcx_ew.forEach(row => {
+        // 本校区强行剔除上午第5节 (jcid === 15)
         if (!isKaramayCampus && row.jcid === 15) {
             return; 
         }
 
         let currentSection = getStandardSection(row.jcid);
+        // 遍历星期一 (z1) 到星期日 (z7)
         for (let day = 1; day <= 7; day++) {
             let zVal = row['z' + day];
             if (zVal) {
+                // 如果同一个时间有两门课（比如单双周不同），按 <br/> 拆分
                 let classParts = zVal.split(/<br\s*\/?>/i); 
+                
                 classParts.forEach(part => {
                     let match = part.match(/(.*?)\[(.*?)\]([^\[]*)(?:\[(.*?)\])?$/);
+                    
                     if (match) {
                         allCourseBlocks.push({
-                            name: match[1].trim(), 
-                            weekStr: match[2].trim(),
-                            weeks: parseWeeks(match[2]), 
-                            teacher: match[3] ? match[3].trim() : "",
-                            position: match[4] ? match[4].trim() : "未知地点", 
-                            day: day, 
-                            section: currentSection 
+                            name: match[1].trim(),                   // 提取：课程名
+                            weekStr: match[2].trim(),                // 提取：原始周次字符串 (用于后续比对)
+                            weeks: parseWeeks(match[2]),             // 解析：纯数字周次数组
+                            teacher: match[3] ? match[3].trim() : "",// 提取：老师
+                            position: match[4] ? match[4].trim() : "未知地点", // 提取：上课地点
+                            day: day,                                // 星期几
+                            section: currentSection                  // 当前是第几节
                         });
                     }
                 });
@@ -291,20 +309,24 @@ async function parseCourses(py_kbcx_ew, isKaramayCampus) {
         }
     });
 
+    // --- 第二步：将连续的小节课“合并”成一门完整的课 ---
     let mergedCourses = [];
     allCourseBlocks.forEach(block => {
+        // 寻找是否已经有相邻的课可以合并 (同星期、同课名、同老师、同地点、同周次，且节次刚好挨着)
         let existingCourse = mergedCourses.find(c => 
             c.day === block.day &&
             c.name === block.name &&
             c.teacher === block.teacher &&
             c.position === block.position &&
             c.weekStr === block.weekStr &&
-            c.endSection === block.section - 1 
+            c.endSection === block.section - 1 // 核心：判断是否紧挨着上一节
         );
 
         if (existingCourse) {
+            // 如果可以合并，就把结束节次往后延
             existingCourse.endSection = block.section;
         } else {
+            // 如果不能合并，就作为一门新课加入
             mergedCourses.push({
                 name: block.name,
                 teacher: block.teacher,
@@ -318,24 +340,27 @@ async function parseCourses(py_kbcx_ew, isKaramayCampus) {
         }
     });
 
+    // 清理掉多余的辅助比对字段，输出最终给拾光 App 的标准格式
     const finalCourses = mergedCourses.map(c => {
         delete c.weekStr; 
         return c;
     });
+
+    console.log("最终生成的标准课表数据：", finalCourses);
 
     try {
         console.log("正在尝试导入课程...");
         const result = await window.AndroidBridgePromise.saveImportedCourses(JSON.stringify(finalCourses));
         if (result === true) {
             console.log("课程导入成功！");
-            AndroidBridge.showToast("测试课程导入成功！");
+            if (typeof AndroidBridge !== 'undefined') AndroidBridge.showToast("测试课程导入成功！");
         } else {
             console.log("课程导入未成功，结果：" + result);
-            AndroidBridge.showToast("测试课程导入失败，请查看日志。");
+            if (typeof AndroidBridge !== 'undefined') AndroidBridge.showToast("测试课程导入失败，请查看日志。");
         }
     } catch (error) {
         console.error("导入课程时发生错误:", error);
-        AndroidBridge.showToast("导入课程失败: " + error.message);
+        if (typeof AndroidBridge !== 'undefined') AndroidBridge.showToast("导入课程失败: " + error.message);
     }
 }
 
